@@ -5,16 +5,19 @@ import matplotlib.pyplot as plt
 from src.MrfGaussianInterporation.myfunc import *
 from src.MrfGaussianInterporation.MrfBayseInterporation import *
 
-def load_data(miss_rate=0.5):
+def load_data(miss_rate=0.3):
     # load data
     img = cv2.imread("./data/Mandrill_8bit_32x32.png", 0)  # Lena, Mandrill 256, 64, 32, 16
     height, width = img.shape  # height:y方向, width：x方向
     img = img.astype("float")
 
     # loss
-    missing_rate = 0.3
-    mask_2d = np.random.binomial(1, missing_rate, size=img.shape)  # 1:欠損, 0:観測
+    mask_2d = np.random.binomial(1, miss_rate, size=img.shape)  # 1:欠損, 0:観測
     img_obs = deepcopy(img)
+    # noise
+    noise_var = 0.001 * np.average(img_obs) ** 2  # 平均電力のx倍でノイズを追加
+    noise = np.random.normal(loc=0, scale=np.sqrt(noise_var), size=img_obs.shape)
+    img_obs = img_obs + noise
     img_obs[np.where(mask_2d == 1)] = np.nan
 
     # reshape
@@ -28,9 +31,10 @@ def load_data(miss_rate=0.5):
     mask = mask_2d.reshape(Dy)
 
     # # plot
-    # fig, ax = plt.subplots(1, 2, squeeze=False)
+    # fig, ax = plt.subplots(1, 3, squeeze=False)
     # ax[0, 0].imshow(img, cmap="jet")
     # ax[0, 1].imshow(img_obs, cmap="jet")
+    # ax[0, 2].imshow(noise, cmap="jet")
     # plt.show()
 
     return y_true, y_obs, mask, Lx, Ly, Dy, Dy_obs, Dy_loss
@@ -61,8 +65,8 @@ if __name__ == '__main__':
 
     # 事前分布
     prior= {
-        "alpha": 0.1,  # alpha, beta は確率変数ではない変数で最尤法で求める
-        "beta": 1,
+        "alpha": 0.01,  # alpha, beta は確率変数ではない変数で最尤法で求める
+        "beta": 0.01,
         "Lambda_a": Lambda_a,  # 潜在変数の精度行列 (alpha=1の場合)
     }
 
@@ -78,7 +82,7 @@ if __name__ == '__main__':
 
     # VI
     mrfGaItpl = MrfGaussianInterpolarion()  # インスタンス化
-    posterior, y_post = \
+    posterior = \
         mrfGaItpl.VariationalInference(deepcopy(y_obs), prior, posterior, option_beta_update, max_iter, threshold)
     ###########################################
 
@@ -86,7 +90,7 @@ if __name__ == '__main__':
     # MSE評価
     Dy = y_true.shape[0]
     MSE_pre = 1 / Dy * np.linalg.norm(y_true - y_avg_itpl, ord=2) ** 2
-    MSE_post = 1 / Dy * np.linalg.norm(y_true - y_post, ord=2) ** 2
+    MSE_post = 1 / Dy * np.linalg.norm(y_true - posterior["mu_a"], ord=2) ** 2
     print("MSE_pre = ", MSE_pre)
     print("MSE_post = ", MSE_post)
     ###########################################

@@ -1,5 +1,4 @@
 import copy
-
 import numpy as np
 from src.MrfGaussianInterporation.myfunc import *
 
@@ -118,10 +117,10 @@ class MrfGaussianInterpolarion():
             alpha_pre = posterior["alpha"]
             beta_pre = posterior["beta"]
 
-        y_post = copy.deepcopy(y_obs)
-        y_post[np.where(mask == 1)] = posterior["mu_y_loss"]  # 事後平均
+        # y_post = copy.deepcopy(y_obs)
+        # y_post[np.where(mask == 1)] = posterior["mu_y_loss"]  # 事後平均
 
-        return  posterior, y_post
+        return  posterior
 
 # MRFの精度行列の作成
 def calc_mrf_cov_inv(height, width):
